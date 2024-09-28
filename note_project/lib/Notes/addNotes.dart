@@ -445,28 +445,6 @@ class _AddnotesState extends State<Addnotes> {
                       ),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      clearSharedPreferences();
-                      print('Clear successfully');
-                    },
-                    child: Container(
-                      height: 50,
-                      width: 140,
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          color: Color.fromRGBO(67, 121, 242, 1)),
-                      child: const Center(
-                        child: Text(
-                          "Clear",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               )
             ],

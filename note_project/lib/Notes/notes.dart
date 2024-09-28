@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:note_project/NoteDetails/noteDetails.dart';
 import 'package:note_project/Notes/addNotes.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class Notes extends StatefulWidget {
   const Notes({super.key});
@@ -9,6 +12,48 @@ class Notes extends StatefulWidget {
 }
 
 class _NotesState extends State<Notes> {
+  List<Map<String, String>> tasks = [];
+
+  // Hàm lấy danh sách task từ SharedPreferences
+  Future<void> _loadTasks() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? taskList = prefs.getStringList('tasks');
+    if (taskList != null) {
+      setState(() {
+        tasks = taskList
+            .map((task) => Map<String, String>.from(jsonDecode(task)))
+            .toList();
+      });
+    }
+  }
+
+  // Hàm cập nhật lại danh sách nhiệm vụ sau khi chỉnh sửa từ màn hình chi tiết
+  void _updateTask(Map<String, String> updatedTask) {
+    setState(() {
+      int index = tasks.indexWhere((task) =>
+          task['date'] == updatedTask['date'] &&
+          task['title'] == updatedTask['title']);
+      if (index != -1) {
+        tasks[index] = updatedTask;
+      }
+    });
+  }
+
+  Future<void> _deleteTask(int index) async {
+    setState(() {
+      tasks.removeAt(index);
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> taskList = tasks.map((task) => jsonEncode(task)).toList();
+    await prefs.setStringList('tasks', taskList);
+  }
+
+  @override
+  void initState() {
+    _loadTasks();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,48 +143,90 @@ class _NotesState extends State<Notes> {
           const SizedBox(
             height: 15,
           ),
-          Container(
-            height: 110,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              color: const Color.fromRGBO(67, 121, 242, 1),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Tittle",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize: 18),
+          ListView.builder(
+            shrinkWrap: true,
+            itemCount: tasks.length,
+            itemBuilder: (context, index) {
+              final task = tasks[index];
+              return Dismissible(
+                key: Key(task['title'] ?? index.toString()), // Sử dụng khóa duy nhất cho mỗi task
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (direction) {
+                    _deleteTask(index);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Task deleted")),
+                    );
+                  },
+                  background: Container(
+                    color: Colors.red,
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    alignment: Alignment.centerRight,
+                    child: Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                   ),
-                  Row(
-                    children: [
-                      SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: Image.asset("assets/image/clock.png")),
-                      SizedBox(
-                        width: 3,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Notedetails(
+                              task: task,
+                              onTaskUpdated: _updateTask,
+                            ),
+                          ),
+                        );
+                  },
+                  child: Container(
+                    height: 110,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15),
+                      color: const Color.fromRGBO(67, 121, 242, 1),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 15, vertical: 15),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            task['title'] ?? 'N/A',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 18),
+                          ),
+                          Row(
+                            children: [
+                              SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: Image.asset("assets/image/clock.png")),
+                              SizedBox(
+                                width: 3,
+                              ),
+                              Text(
+                                '${task['date']} / ${task['startTime']} - ${task['endTime']}',
+                                style:
+                                    TextStyle(color: Colors.white, fontSize: 15),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            task['content'] ?? 'No description',
+                            style: TextStyle(color: Colors.white, fontSize: 15),
+                          )
+                        ],
                       ),
-                      Text(
-                        "Date/time",
-                        style: TextStyle(color: Colors.white, fontSize: 15),
-                      ),
-                    ],
+                    ),
                   ),
-                  Text(
-                    "Description",
-                    style: TextStyle(color: Colors.white, fontSize: 15),
-                  )
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           )
         ]),
       ),
